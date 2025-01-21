@@ -1,0 +1,4 @@
+fileignoreconfig:
+- filename: src/main/java/bencoding/Decoder.java
+  checksum: 265e6843de5faaf1bbff09011c39f05349afd539e1db7cbe240e62e0c70e7a69
+version: ""
