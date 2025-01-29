@@ -1,5 +1,7 @@
 package bencoding;
 
+import kotlin.Pair;
+
 import java.nio.ByteBuffer;
 import java.util.*;
 
@@ -21,7 +23,7 @@ public class Decoder {
     public static Object decode(ByteBuffer data) {
         Decoder.data = data;
         currentIndex = 0;
-        Decoder.size = data.capacity();
+        Decoder.size = data.remaining();
         return decodeObject();
     }
 
@@ -46,8 +48,16 @@ public class Decoder {
             return decodeString();
         } else if (c == TOKEN_END.getIdentifier()) {
             return null;
-        } else throw new RuntimeException();
+        } else if (c == 0 || (c & 0xFF) == 0xEF) {
+            moveNext();
+            return decodeObject();
+        } else {
+            System.out.println("Current character is : " + c);
+            throw new RuntimeException();
+        }
+
     }
+
 
     private static Map<String, Object> decodeDict() {
         Map<String, Object> map = new LinkedHashMap<>();
@@ -70,23 +80,42 @@ public class Decoder {
         return objects;
     }
 
-    private static String decodeString() {
+    private static Object decodeString() {
         StringBuilder numStr = new StringBuilder();
-        StringBuilder word = new StringBuilder();
+
         while (hasNext() && peek() != TOKEN_STRING_SEPARATOR.getIdentifier()) {
             numStr.append(peek());
             moveNext();
         }
         moveNext();
         int strLen = Integer.parseInt(numStr.toString());
+        Pair<byte[], Boolean> pairReturn = decodeBytes(strLen);
+        byte[] bytestring = pairReturn.getFirst();
+        boolean isByteString = pairReturn.getSecond();
+        if (isByteString) return bytestring;
+
+        return new String(bytestring);
+    }
+
+
+    private static Pair<byte[], Boolean> decodeBytes(int strLen) {
+        byte[] word = new byte[strLen];
         int index = 0;
+        boolean isByteString = strLen == 20;
+
         while (hasNext() && index < strLen) {
-            word.append(peek());
+            byte peekElem = (byte) peek();
+            if (peekElem < 32 || peekElem > 126) {
+                isByteString = true;
+            }
+            word[index] = peekElem;
             moveNext();
             index++;
         }
-        return word.toString();
+
+        return new Pair<>(word, isByteString);
     }
+
 
     private static Integer decodeInt() {
         StringBuilder numStr = new StringBuilder();

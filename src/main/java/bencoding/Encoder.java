@@ -17,18 +17,19 @@ public class Encoder {
         encodeObject(object);
         return ByteBuffer.wrap(byteStream.toByteArray());
     }
+
     private static void encodeObject(Object object) throws Exception {
-        if (object instanceof byte[]) {
-            encodeBytes((byte[]) object);
-        } else if (object instanceof String) {
-            encodeString(String.valueOf(object));
-        } else if (object instanceof Integer) {
-            encodeInteger((int) object);
-        } else if (object instanceof List) {
-            encodeList((List<Object>) object);
-        } else if (object instanceof Map) {
-            encodeDict((Map<String, Object>) object);
-        } else throw new Exception("Unable to encode type " + object.getClass().getName());
+        switch (object) {
+            case byte[] bytes -> encodeBytes(bytes);
+            case String s -> encodeString(String.valueOf(object));
+            case Integer i -> encodeInteger((int) object);
+            case List<?> list -> encodeList((List<Object>) object);
+            case Map<?, ?> map -> encodeDict((Map<String, Object>) object);
+            case null, default -> {
+                assert object != null;
+                throw new Exception("Unable to encode type " + object.getClass().getName());
+            }
+        }
     }
 
     private static void encodeDict(Map<String, Object> dictObject) throws Exception {
@@ -68,7 +69,11 @@ public class Encoder {
 
     private static void encodeString(String s) throws IOException {
         byte[] strBytes = s.getBytes(StandardCharsets.UTF_8);
-        encodeBytes(strBytes);
+        String strLen = String.valueOf(strBytes.length);
+        byteStream.write(strLen.getBytes(StandardCharsets.UTF_8));
+        byteStream.write(TOKEN_STRING_SEPARATOR.getIdentifier());
+        byteStream.write(strBytes);
+//        encodeBytes(strBytes);
     }
 
 
